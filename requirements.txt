@@ -2,9 +2,9 @@
 # Smart Video AI - Project Dependencies
 # ==============================================================================
 
-# Core App Framework & Web Server Fixes
-streamlit>=1.32.0,<1.36.0
-starlette>=0.27.0,<0.37.0
+# Core App Framework & Utilities
+streamlit>=1.35.0
+starlette>=0.36.3
 watchdog>=4.0.0
 streamlit-extras>=0.4.0
 
@@ -19,13 +19,15 @@ torch>=2.1.0
 torchaudio>=2.1.0
 deep-translator>=1.11.4
 
-# LangChain & LLM Providers
-langchain>=0.2.0
-langchain-core>=0.2.0
-langchain-community>=0.2.0
+# LangChain & LLM Providers (Updated to avoid zstandard source build)
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
 langchain-mistralai>=0.1.0
 langchain-huggingface>=0.0.3
-mistralai>=0.4.0
+langsmith>=0.2.0
+zstandard>=0.23.0
+cffi>=1.17.0
 
 # Vector Storage & Embeddings
 chromadb>=0.5.0
