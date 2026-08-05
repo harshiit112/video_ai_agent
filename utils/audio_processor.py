@@ -1,6 +1,8 @@
 import yt_dlp
 from pydub import AudioSegment
 import os
+from youtube_transcript_api import YouTubeTranscriptApi
+import re
 
 DOWNLOAD_DIR = 'downloades'
 os.makedirs(DOWNLOAD_DIR,exist_ok = True)
@@ -50,17 +52,37 @@ def chunk_audio(wav_path : str, chunk_minutes : int = 10) -> list:
     return chunks
 
 
-def process_input(source : str) -> list:
-    if source.startswith("http://") or source.startswith("https://"):
-        print("Detected YouTube URL. Downloading audio...")
-        wav_path = download_youtube_audio(source)
-    else:
-        print("Detected local file. Converting to WAV...")
-        wav_path = convert_to_wav(source)
+def process_input(source_url):
+    ydl_opts = {
+        'format': 'm4a/bestaudio/best',
+        'outtmpl': '%(id)s.%(ext)s',
+        'quiet': True,
+        'no_warnings': True,
+        # Rotate extraction clients to bypass 403 Forbidden on cloud servers
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web']
+            }
+        }
+    }
+    
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(source_url, download=True)
+        filename = ydl.prepare_filename(info)
+        return filename
 
-    print("Chunking audio...")
-    chunks = chunk_audio(wav_path)
-    print(f"Audio ready - {len(chunks)} chunk(s) created.")
-    return chunks
 
-
+def get_youtube_transcript(video_url):
+    # Extract YouTube Video ID from URL
+    video_id_match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11})", video_url)
+    if not video_id_match:
+        raise ValueError("Invalid YouTube URL")
+    
+    video_id = video_id_match.group(1)
+    
+    # Fetch transcript captions directly
+    transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'hi'])
+    
+    # Combine text items into a single transcript string
+    full_transcript = " ".join([item['text'] for item in transcript_list])
+    return full_transcript
