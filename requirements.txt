@@ -2,8 +2,9 @@
 # Smart Video AI - Project Dependencies
 # ==============================================================================
 
-# Core App Framework & Extras
-streamlit>=1.32.0
+# Core App Framework & Web Server Fixes
+streamlit>=1.32.0,<1.36.0
+starlette>=0.27.0,<0.37.0
 watchdog>=4.0.0
 streamlit-extras>=0.4.0
 
