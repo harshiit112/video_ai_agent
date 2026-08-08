@@ -9,7 +9,7 @@ watchdog>=4.0.0
 streamlit-extras>=0.4.0
 
 # Audio Processing & YouTube Utilities
-yt-dlp>=2024.08.01
+yt-dlp>=2024.3.10
 pydub>=0.25.1
 ffmpeg-python>=0.2.0
 
@@ -44,4 +44,4 @@ numpy>=1.26.0
 tqdm>=4.66.0
 requests>=2.32.0
 protobuf>=3.20.3,<4.0.0
-youtube-transcript-api
+youtube-transcript-api>=0.6.0
