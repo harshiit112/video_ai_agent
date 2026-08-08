@@ -10,6 +10,7 @@ ENV/
 env.bak/
 venv.bak/
 .venv/
+cookies.txt
 
 # ── Environment Variables & Secrets ───────────────────────────────────────────
 .env

@@ -9,7 +9,7 @@ watchdog>=4.0.0
 streamlit-extras>=0.4.0
 
 # Audio Processing & YouTube Utilities
-yt-dlp>=2024.03.10
+yt-dlp>=2024.08.01
 pydub>=0.25.1
 ffmpeg-python>=0.2.0
 
