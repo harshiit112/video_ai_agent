@@ -214,22 +214,30 @@ def extract_video_id(url: str) -> str:
 
 
 def get_youtube_transcript(video_url: str) -> str:
-    """Fetch captions directly from YouTube API without downloading media files."""
+    """Fetch captions directly from YouTube API without triggering yt-dlp downloads."""
     video_id = extract_video_id(video_url)
     
-    # Instantiate API client
     api = YouTubeTranscriptApi()
     
-    # Try fetching transcript in English, Hindi, or auto-generated languages
-    transcript_list = api.get_transcript(video_id, languages=['en', 'hi', 'en-US', 'en-GB'])
+    # 1. Fetch all available transcript tracks for the video
+    transcript_list_obj = api.list_transcripts(video_id)
     
-    # Join text into a single string
-    full_transcript = " ".join([item['text'] for item in transcript_list])
+    # 2. Try manually created transcripts first, then auto-generated ones
+    try:
+        transcript_obj = transcript_list_obj.find_transcript(['en', 'hi', 'en-US', 'en-GB', 'hi-IN'])
+    except Exception:
+        # Fallback to ANY available auto-generated language track
+        transcript_obj = transcript_list_obj.find_generated_transcript(['en', 'hi', 'en-US', 'hi-IN'])
+    
+    fetched_data = transcript_obj.fetch()
+    full_transcript = " ".join([item['text'] for item in fetched_data])
     return full_transcript
 
 
+import tempfile
+import streamlit as st
+
 def download_youtube_audio(url: str) -> str:
-    """Fallback audio downloader using Web/Android player spoofing."""
     output_template = os.path.join(DOWNLOAD_DIR, "%(id)s.%(ext)s")
     
     ydl_opts = {
@@ -244,22 +252,25 @@ def download_youtube_audio(url: str) -> str:
         ],
         "quiet": True,
         "no_warnings": True,
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["android", "ios", "web_creator"],
-                "player_skip": ["webpage", "configs"],
-            }
-        },
-        "http_headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        },
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info)
-        return os.path.splitext(filename)[0] + ".wav"
+    # Write Streamlit Secret cookies to a temp file if available
+    cookie_temp_file = None
+    if "YOUTUBE_COOKIES" in st.secrets and st.secrets["YOUTUBE_COOKIES"].strip():
+        cookie_temp_file = tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".txt")
+        cookie_temp_file.write(st.secrets["YOUTUBE_COOKIES"])
+        cookie_temp_file.flush()
+        ydl_opts["cookiefile"] = cookie_temp_file.name
 
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            return os.path.splitext(filename)[0] + ".wav"
+    finally:
+        # Clean up temporary cookie file after download completes
+        if cookie_temp_file and os.path.exists(cookie_temp_file.name):
+            os.remove(cookie_temp_file.name)
 
 def convert_to_wav(input_path: str) -> str:
     """Convert local audio/video file to 16kHz mono WAV."""
