@@ -213,29 +213,34 @@ def extract_video_id(url: str) -> str:
     raise ValueError("Invalid YouTube URL")
 
 
+from youtube_transcript_api import YouTubeTranscriptApi
+
 def get_youtube_transcript(video_url: str) -> str:
     """Fetch captions directly from YouTube API without triggering yt-dlp downloads."""
     video_id = extract_video_id(video_url)
-    
     api = YouTubeTranscriptApi()
     
-    # 1. Fetch all available transcript tracks for the video
-    transcript_list_obj = api.list_transcripts(video_id)
+    # List all available transcripts
+    transcript_list = api.list_transcripts(video_id)
     
-    # 2. Try manually created transcripts first, then auto-generated ones
     try:
-        transcript_obj = transcript_list_obj.find_transcript(['en', 'hi', 'en-US', 'en-GB', 'hi-IN'])
+        # Try finding manually created transcripts first
+        t = transcript_list.find_transcript(['en', 'hi', 'en-US', 'hi-IN'])
     except Exception:
-        # Fallback to ANY available auto-generated language track
-        transcript_obj = transcript_list_obj.find_generated_transcript(['en', 'hi', 'en-US', 'hi-IN'])
-    
-    fetched_data = transcript_obj.fetch()
-    full_transcript = " ".join([item['text'] for item in fetched_data])
-    return full_transcript
+        # Fallback to finding any generated transcript
+        t = transcript_list.find_generated_transcript(['en', 'hi', 'en-US', 'hi-IN'])
+        
+    fetched = t.fetch()
+    return " ".join([item['text'] for item in fetched])
 
 
+import os
 import tempfile
 import streamlit as st
+import yt_dlp
+
+DOWNLOAD_DIR = 'downloades'
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 def download_youtube_audio(url: str) -> str:
     output_template = os.path.join(DOWNLOAD_DIR, "%(id)s.%(ext)s")
@@ -252,9 +257,11 @@ def download_youtube_audio(url: str) -> str:
         ],
         "quiet": True,
         "no_warnings": True,
+        # Allow yt-dlp to automatically manage client rotation without hardcoded overrides
+        "nocheckcertificate": True,
     }
 
-    # Write Streamlit Secret cookies to a temp file if available
+    # Pass Streamlit Secret cookies if configured
     cookie_temp_file = None
     if "YOUTUBE_COOKIES" in st.secrets and st.secrets["YOUTUBE_COOKIES"].strip():
         cookie_temp_file = tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".txt")
@@ -268,7 +275,6 @@ def download_youtube_audio(url: str) -> str:
             filename = ydl.prepare_filename(info)
             return os.path.splitext(filename)[0] + ".wav"
     finally:
-        # Clean up temporary cookie file after download completes
         if cookie_temp_file and os.path.exists(cookie_temp_file.name):
             os.remove(cookie_temp_file.name)
 
